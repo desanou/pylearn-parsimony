@@ -9,9 +9,4 @@
 *.log
 *.pdf
 .*.swp
-.idea/inspectionProfiles/profiles_settings.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/other.xml
-.idea/pylearn-parsimony.iml
-.idea/vcs.xml
+.idea/
