@@ -45,7 +45,7 @@ __all__ = ["CombinedFunction",
            "LinearRegressionL1L2TV", "LinearRegressionL1L2GL",
            "LogisticRegressionL1L2TV", "LogisticRegressionL1L2GL",
            "LinearRegressionL2SmoothedL1TV",
-           "AugmentedLinearRegressionL1L2TV", "AugmentedLinearRegressionL1L2TVp"
+           "AugmentedLinearRegressionL1L2TV", "AugmentedLinearRegressionMglasso"
            "PrincipalComponentAnalysisL1TV"]
 
 # TODO: Add penalty_start and mean to all of these!
