@@ -33,11 +33,11 @@ import parsimony.utils.maths as maths
 import parsimony.utils.consts as consts
 from parsimony.algorithms.utils import Info
 import parsimony.functions.properties as properties
+#import parsimony.estimators.RegressionEstimator as RegressionEstimator
+
 
 __all__ = ["ISTA", "FISTA", "CONESTA", "StaticCONESTA",
-           "ADMM",
-
-           "DykstrasProjectionAlgorithm",
+           "ADMM", "ADMMglasso", "DykstrasProjectionAlgorithm",
            "ParallelDykstrasProjectionAlgorithm"]
 
 
@@ -1200,6 +1200,194 @@ class ADMM(bases.ExplicitAlgorithm,
             self.info_set(Info.ok, True)
 
         return z_new
+
+
+class ADMMglasso(bases.ExplicitAlgorithm,
+           bases.IterativeAlgorithm,
+           bases.InformationAlgorithm):
+    """The alternating direction method of multipliers (ADMM). Computes the
+    minimum of the sum of two functions with associated proximal or projection
+    operators. Solves problems on the form
+
+        min. f(x, z) = g(x) + h(z)
+        s.t. z = Ax
+
+    Parameters
+    ----------
+    rho : Positive float. The penalty parameter.
+
+    mu : Float, greater than 1. The factor within which the primal and dual
+            variables should be kept. Set to less than or equal to 1 if you
+            don't want to update the penalty parameter rho dynamically.
+
+    tau : Float, greater than 1. Increase rho by a factor tau.
+
+    info : List or tuple of utils.consts.Info. What, if any, extra run
+            information should be stored. Default is an empty list, which means
+            that no run information is computed nor returned.
+
+    eps : Positive float. Tolerance for the stopping criterion.
+
+    max_iter : Non-negative integer. Maximum allowed number of iterations.
+
+    min_iter : Non-negative integer less than or equal to max_iter. Minimum
+            number of iterations that must be performed. Default is 1.
+    """
+    INTERFACES = [properties.SplittableFunction,
+                  properties.AugmentedProximalOperator,
+                  properties.OR(properties.ProximalOperator,
+                                properties.ProjectionOperator)]
+
+    INFO_PROVIDED = [Info.ok,
+                     Info.num_iter,
+                     Info.time,
+                     Info.fvalue,
+                     Info.converged,
+                     Info.verbose,
+                     Info.admm_iter,
+                     Info.fista_iter]
+
+    def __init__(self, rho=1.0, mu=10.0, tau=2.0,
+                 info=[], A = None,
+                 eps=consts.TOLERANCE, max_iter=consts.MAX_ITER, min_iter=1,
+                 simulation=False):
+                 # TODO: Investigate what is a good default value here!
+
+        super(ADMMglasso, self).__init__(info=info,
+                                   max_iter=max_iter,
+                                   min_iter=min_iter)
+
+        self.rho = max(consts.FLOAT_EPSILON, float(rho))
+        self.mu = max(1.0, float(mu))
+        self.tau = max(1.0, float(tau))
+        self.A = A
+
+        self.eps = max(consts.FLOAT_EPSILON, float(eps))
+
+        self.simulation = bool(simulation)
+    @bases.force_reset
+    @bases.check_compatibility
+    def run(self, functions, xy, A):
+        """Finds the minimum of two functions with one with proximal
+        operator and the other via reweighted lasso.
+
+        Parameters
+        ----------
+        functions : List or tuple with two Functions or a SplittableFunction.
+                The two functions.
+
+        xy : List or tuple with two elements, numpy arrays. The starting points
+        for the minimisation.
+        """
+
+        # Copy the allowed info keys for FISTA.
+        fista_info = list()
+        for nfo in self.info_copy():
+            if nfo in FISTA.INFO_PROVIDED:
+                fista_info.append(nfo)
+
+        if self.info_requested(Info.ok):
+            self.info_set(Info.ok, False)
+        if self.info_requested(Info.time):
+            t = []
+        if self.info_requested(Info.fvalue):
+            f = []
+        if self.info_requested(Info.converged):
+            self.info_set(Info.converged, False)
+        if self.info_requested(Info.fista_iter):
+            niter_fista = []
+
+        x_new = xy[0]
+        y_new = xy[1]
+        z_new = y_new.copy()
+        u_new = y_new.copy()
+
+        for i in range(1, self.max_iter + 1):
+
+            if self.info_requested(Info.time):
+                tm = utils.time_cpu()
+
+            x_old = x_new
+            z_old = z_new
+            u_old = u_new
+
+            Ax = [0.0] * len(self.A)
+            for i in range(len(self.A)):
+                Ax[i] = A[i].dot(x_new)
+            Ax = np.vstack(Ax)
+            y_new = Ax
+
+            eval_func = functions.betahat(z=z_old, u=u_old, eps=self.eps, max_iter=self.max_iter, info=fista_info)
+            fista = eval_func[0]
+            x_new = eval_func[1]
+            z_new = functions.h.prox(y_new - u_old)
+
+            u_new = (- y_new + z_new) + u_old
+
+            # Update global iteration counter.
+            self.num_iter += fista.num_iter
+
+            # Get info from algorithm.
+            if self.info_requested(Info.time):
+                t.append(utils.time_cpu() - tm)
+            if self.info_requested(Info.fvalue):
+                fval = functions.f(x_new)
+                f.append(fval)
+            if self.info_requested(Info.fista_iter):
+                niter_fista.append(fista.num_iter)
+
+            if not self.simulation:
+                if i == 1:
+                    if maths.norm(x_new - x_old) < self.eps \
+                            and i >= self.min_iter:
+#                        print "Stopping criterion kicked in!"
+                        if self.info_requested(Info.converged):
+                            self.info_set(Info.converged, True)
+
+                        break
+                else:
+                    if maths.norm(x_new - x_old) / maths.norm(x_old) < self.eps \
+                            and i >= self.min_iter:
+#                        print "Stopping criterion kicked in!"
+                        if self.info_requested(Info.converged):
+                            self.info_set(Info.converged, True)
+
+                        break
+
+            # Update the penalty parameter, rho, dynamically.
+            if self.mu > 1.0:
+                r = -y_new + z_new
+                s = (z_new - z_old) * -self.rho
+                norm_r = maths.norm(r)
+                norm_s = maths.norm(s)
+#                print "norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", \
+#                    self.rho
+
+                if norm_r > self.mu * norm_s:
+                    self.rho *= self.tau
+                    u_new *= 1.0 / self.tau  # Rescale dual variable.
+                elif norm_s > self.mu * norm_r:
+                    self.rho /= self.tau
+                    u_new *= self.tau  # Rescale dual variable.
+
+                # Update the penalty parameter in the functions.
+                functions.set_rho(self.rho)
+
+        if self.info_requested(Info.num_iter):
+            self.info_set(Info.num_iter, self.num_iter)
+        if self.info_requested(Info.time):
+            self.info_set(Info.time, t)
+        if self.info_requested(Info.fvalue):
+            self.info_set(Info.fvalue, f)
+        if self.info_requested(Info.ok):
+            self.info_set(Info.ok, True)
+        if self.info_requested(Info.admm_iter):
+            self.info_set(Info.admm_iter, i-1)
+        if self.info_requested(Info.fista_iter):
+            self.info_set(Info.fista_iter, niter_fista)
+
+        return x_new
+
 
 
 class DykstrasProximalAlgorithm(bases.ExplicitAlgorithm):
