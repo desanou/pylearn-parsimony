@@ -737,7 +737,7 @@ class L2(properties.AtomicFunction,
             beta_ = beta
 
         norm = maths.norm(beta_)
-        if norm >= l:
+        if norm > l:
             beta_ *= (1.0 - l / norm) * beta_
         else:
             beta_ *= 0.0
@@ -1790,6 +1790,240 @@ class RidgeSquaredError(properties.CompositeFunction,
 
         return y
 
+# class LassoSquaredError(properties.CompositeFunction,
+#                         properties.Gradient,
+#                         properties.StronglyConvex,
+#                         properties.Penalty,
+#                         properties.ProximalOperator):
+#     """Represents a lasso squared error penalty, i.e. a representation of
+#
+#         f(x) = l.((1 / (2 * n)) * ||Xb - y||²_2 + (l / 2) * ||b||_1),
+#
+#     where ||.||_1 is the L1 norm.
+#
+#     Parameters
+#     ----------
+#     l : Non-negative float. The Lagrange multiplier, or regularisation
+#             constant, of the function.
+#
+#     X : Numpy array (n-by-p). The regressor matrix.
+#
+#     y : Numpy array (n-by-1). The regressand vector.
+#
+#     k : Non-negative float. The lasso parameter.
+#
+#     penalty_start : Non-negative integer. The number of columns, variables
+#             etc., to except from penalisation. Equivalently, the first
+#             index to be penalised. Default is 0, all columns are included.
+#
+#     mean : Boolean. Whether to compute the squared loss or the mean
+#             squared loss. Default is True, the mean squared loss.
+#     """
+#     def __init__(self, X, y, k, l=1.0, penalty_start=0, mean=True):
+#         self.l = max(0.0, float(l))
+#         self.X = X
+#         self.y = y
+#         self.k = max(0.0, float(k))
+#
+#         self.penalty_start = max(0, int(penalty_start))
+#         self.mean = bool(mean)
+#
+#         self.reset()
+#
+#     def reset(self):
+#         """Free any cached computations from previous use of this Function.
+#
+#         From the interface "Function".
+#         """
+#         self._Xty = None
+#         self._s2 = None
+#         self._V = None
+#
+#     def f(self, x):
+#         """Function value.
+#
+#         From the interface "Function".
+#
+#         Parameters
+#         ----------
+#         x : Numpy array. Regression coefficient vector. The point at which to
+#                 evaluate the function.
+#         """
+#         if self.penalty_start > 0:
+#             x_ = x[self.penalty_start:, :]
+# #            Xx = np.dot(self.X[:, self.penalty_start:], x_)
+#             Xx_ = np.dot(self.X, x) \
+#                 - np.dot(self.X[:, :self.penalty_start],
+#                          x[:self.penalty_start, :])
+# #            print "penalties.LassoSquaredError, DIFF:", \
+# #                    np.linalg.norm(Xx - Xx_)
+#         else:
+#             x_ = x
+#             Xx_ = np.dot(self.X, x_)
+#
+#         if self.mean:
+#             d = 2.0 * float(self.X.shape[0])
+#         else:
+#             d = 2.0
+#
+#         # f = (1.0 / d) * np.sum((Xx_ - self.y) ** 2) \
+#         #         + (self.k / 2.0) * np.sum(x_ ** 2)
+#         f = (1.0 / d) * np.sum((Xx_ - self.y) ** 2) \
+#                 + (self.k / 2.0) * maths.norm1(x_)
+#
+#         return self.l * f
+#
+#     def grad(self, x):
+#         """Gradient of the function at beta.
+#
+#         From the interface "Gradient".
+#
+#         Parameters
+#         ----------
+#         x : Numpy array. The point at which to evaluate the gradient.
+#
+#         Examples
+#         --------
+#         >>> import numpy as np
+#         >>> from parsimony.functions.losses import RidgeRegression
+#         >>>
+#         >>> np.random.seed(42)
+#         >>> X = np.random.rand(100, 150)
+#         >>> y = np.random.rand(100, 1)
+#         >>> rr = RidgeRegression(X=X, y=y, k=3.14159265)
+#         >>> beta = np.random.rand(150, 1)
+#         >>> np.linalg.norm(rr.grad(beta)
+#         ...       - rr.approx_grad(beta, eps=1e-4)) < 5e-8
+#         True
+#         """
+#         if self.penalty_start > 0:
+#             x_ = x[self.penalty_start:, :]
+#             X_ = self.X[:, self.penalty_start:]
+#             grad = np.dot(X_.T, np.dot(self.X_, x_) - self.y)
+#             del X_
+#         else:
+#             x_ = x
+#             grad = np.dot((np.dot(self.X, x_) - self.y).T, self.X).T
+#
+#         if self.mean:
+#             grad *= 1.0 / float(self.X.shape[0])
+#
+#         grad += self.k * x_
+#
+#         if self.penalty_start > 0:
+#             grad = np.vstack((np.zeros((self.penalty_start, 1)),
+#                               self.l * grad))
+#         else:
+#             grad += self.l
+#
+#         return grad
+#
+#     def L(self):
+#         """Lipschitz constant of the gradient.
+#
+#         From the interface "LipschitzContinuousGradient".
+#         """
+#         if self._lambda_max is None:
+#             s = np.linalg.svd(self.X, full_matrices=False, compute_uv=False)
+#
+#             self._lambda_max = np.max(s) ** 2
+#
+#             if len(s) < self.X.shape[1]:
+#                 self._lambda_min = 0.0
+#             else:
+#                 self._lambda_min = np.min(s) ** 2
+#
+#             if self.mean:
+#                 self._lambda_max /= float(self.X.shape[0])
+#                 self._lambda_min /= float(self.X.shape[0])
+#
+#         return self.l * (self._lambda_max + self.k)
+#
+#     def parameter(self):
+#         """Returns the strongly convex parameter for the function.
+#
+#         From the interface "StronglyConvex".
+#         """
+#         if self._lambda_min is None:
+#             self._lambda_max = None
+#             self.L()  # Precompute
+#
+#         return self.l * (self._lambda_min + self.k)
+#
+#     def prox(self, x, factor=1.0, eps=consts.TOLERANCE, max_iter=100):
+#         """The proximal operator associated to this function.
+#
+#         Parameters
+#         ----------
+#         x : Numpy array (p-by-1). The point at which to apply the proximal
+#                 operator.
+#
+#         factor : Positive float. A factor by which the Lagrange multiplier is
+#                 scaled. This is usually the step size.
+#
+#         eps : Positive float. This is the stopping criterion for inexact
+#                 proximal methods, where the proximal operator is approximated
+#                 numerically.
+#
+#         max_iter : Positive integer. This is the maximum number of iterations
+#                 for inexact proximal methods, where the proximal operator is
+#                 approximated numerically.
+#
+#         index : Non-negative integer. For multivariate functions, this
+#                 identifies the variable for which the proximal operator is
+#                 associated.
+#
+#         From the interface "ProximalOperator".
+#         """
+#         # y = inv(X'.X + (k + 1 / l).I).((1 / l).x + X'.v)
+#         n, p = self.X.shape
+#         rho = 1.0 / self.l
+#
+#         if self._Xty is None:
+#             self._Xty = np.dot(self.X.T, self.y)
+#
+#         v = rho * x + self._Xty
+#         c = self.k + rho
+#
+#         if n >= p:
+#             if self._s2 is None or self._V is None:
+# #                # Ridge solution
+# #                XtX_klI = np.dot(self.X.T, self.X)
+# #                index = np.arange(min(XtX_klI.shape))
+# #                XtX_klI[index, index] += c
+# #                self._inv_XtX_klI = np.linalg.inv(XtX_klI)
+#
+#                 _, self._s2, self._V = np.linalg.svd(self.X)
+#                 self._V = self._V.T
+#                 self._s2 = self._s2.reshape((p, 1)) ** 2
+# #                _inv_XtX_klI = np.dot(V, np.reciprocal(c + s ** 2) * V.T)
+#
+# #            y = np.dot(self._inv_XtX_klI, v)
+#             y = np.dot(self._V,
+#                        np.reciprocal(c + self._s2) * np.dot(self._V.T, v))
+#
+#         else:  # If n < p
+#             if self._s2 is None or self._V is None:
+# #                # Ridge solution using the Woodbury matrix identity.
+# #                XXt_klI = np.dot(self.X, self.X.T)
+# #                index = np.arange(min(XXt_klI.shape))
+# #                XXt_klI[index, index] += c
+# #                self._inv_XtX_klI = np.linalg.inv(XXt_klI)
+#
+#                 _, self._s2, self._V = np.linalg.svd(self.X.T)
+#                 self._V = self._V.T
+#                 self._s2 = self._s2.reshape((n, 1)) ** 2
+# #                _inv_XtX_klI = np.dot(V, np.reciprocal(c + s ** 2) * V.T)
+#
+# #            y = (v - np.dot(self.X.T, np.dot(self._inv_XtX_klI,
+# #                                             np.dot(self.X, v)))) / c
+#             Xv = np.dot(self.X, v)
+#             y = (v - np.dot(self.X.T, np.dot(self._V,
+#                                              np.reciprocal(c + self._s2) \
+#                                                  * np.dot(self._V.T, Xv)))) \
+#                                                      * (1.0 / c)
+#
+#         return y
 
 class LinearConstraint(properties.IndicatorFunction,
                        properties.Constraint,
@@ -2017,7 +2251,8 @@ class LinearVariableConstraint(properties.IndicatorFunction,
             Ax[i] = A[i].dot(x_)
         Ax = np.vstack(Ax)
         if maths.norm(Ax - r) < consts.TOLERANCE:
-            return xr
+            # return xr
+            return linalgs.MultipartArray(xr, vertical=True)
 
         # Precompute
         if self._inv_AtA_I is None:
