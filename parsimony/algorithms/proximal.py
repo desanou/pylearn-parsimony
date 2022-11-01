@@ -538,7 +538,8 @@ class CONESTA(bases.ExplicitAlgorithm,
                      Info.func_val,
                      Info.gap,
                      Info.mu,
-                     Info.verbose]
+                     Info.verbose,
+                     Info.fista_iter]
 
     def __init__(self, mu_min=consts.TOLERANCE, tau=0.5,
                  info=[], eps=consts.TOLERANCE, max_iter=10000, min_iter=1,
@@ -623,6 +624,8 @@ class CONESTA(bases.ExplicitAlgorithm,
             self.info_set(Info.converged, False)
         if self.info_requested(Info.mu):
             mu_ = []
+        if self.info_requested(Info.fista_iter):
+            niter_fista = []
 
         i = 0  # Iteration counter.
         while loop:
@@ -656,6 +659,8 @@ class CONESTA(bases.ExplicitAlgorithm,
                 mu_ += [mu] * algorithm.num_iter
             if self.info_requested(Info.gap):
                 gap_ += algorithm.info_get(Info.gap)
+            if self.info_requested(Info.fista_iter):
+                niter_fista.append(algorithm.num_iter)
 
             # Obtain the gap from the last FISTA run. May be small and negative
             # close to machine epsilon.
@@ -707,6 +712,8 @@ class CONESTA(bases.ExplicitAlgorithm,
             self.info_set(Info.mu, mu_)
         if self.info_requested(Info.ok):
             self.info_set(Info.ok, True)
+        if self.info_requested(Info.fista_iter):
+            self.info_set(Info.fista_iter, niter_fista)
 
         return beta
 
