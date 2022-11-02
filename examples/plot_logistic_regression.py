@@ -8,16 +8,17 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   edouard.duchesnay@cea.fr
 @license: BSD 3-clause.
 """
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.sparse as sparse
-import matplotlib.pyplot as plt
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import precision_recall_fscore_support
+
 import parsimony.datasets as datasets
-import parsimony.functions.nesterov.tv as nesterov_tv
 import parsimony.estimators as estimators
+import parsimony.functions.nesterov.tv as nesterov_tv
 import parsimony.utils as utils
 from parsimony.utils.penalties import l1_max_logistic_loss
-from sklearn.metrics import precision_recall_fscore_support
-from sklearn.linear_model import LogisticRegression
 
 ###############################################################################
 # Dataset

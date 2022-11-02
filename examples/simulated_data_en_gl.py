@@ -17,17 +17,16 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
-import numpy as np
 import matplotlib.pyplot as plot
-
-import parsimony.functions as functions
-import parsimony.algorithms as algorithms
-import parsimony.utils.maths as maths
+import numpy as np
+import parsimony.datasets.simulated as simulated
 import parsimony.funcs.helper.gl as gl
+
+import parsimony.algorithms as algorithms
+import parsimony.functions as functions
+import parsimony.utils.maths as maths
 # import parsimony.funcs.helper.tv as tv
 import parsimony.utils.weights as weights
-
-import parsimony.datasets.simulated as simulated
 
 seed = 1
 np.random.seed(seed)

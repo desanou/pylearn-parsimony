@@ -9,11 +9,10 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @license: BSD 3-clause.
 """
 import abc
-
 import numpy as np
+import scipy.sparse.linalg as linalg
 import scipy.stats as stat
 from scipy.linalg import toeplitz
-import scipy.sparse.linalg as linalg
 from six import with_metaclass
 
 try:

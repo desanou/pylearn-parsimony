@@ -16,30 +16,27 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 import numpy as np
 from scipy import sparse
 
+import parsimony.algorithms.proximal as proximal
+import parsimony.estimators as estimators
+import parsimony.utils.consts as consts
+import parsimony.utils.linalgs as linalgs
+import parsimony.utils.maths as maths
+import parsimony.utils.weights as weights
+from parsimony.utils import check_arrays
+from parsimony.utils import deprecated
 from . import properties
+from .losses import LatentVariableVariance
+from .losses import LinearRegression
+from .losses import RidgeLogisticRegression
+from .losses import RidgeRegression
+from .nesterov.gl import GroupLassoOverlap
 # import nesterov.properties as nesterov_properties
 # from .nesterov.l1 import L1 as SmoothedL1
 # import nesterov
 from .nesterov.l1tv import L1TV
 from .nesterov.tv import TotalVariation
-from .nesterov.gl import GroupLassoOverlap
-from .penalties import ZeroFunction, L1, LinearVariableConstraint, L2
 from .penalties import RidgeSquaredError
-from .losses import LinearRegression
-from .losses import RidgeRegression
-from .losses import RidgeLogisticRegression
-from .losses import LatentVariableVariance
-import parsimony.utils.linalgs as linalgs
-import parsimony.utils.consts as consts
-import parsimony.utils.maths as maths
-from parsimony.utils import deprecated
-from parsimony.utils import check_arrays
-import parsimony.estimators as estimators
-import parsimony.functions as functions
-import parsimony.functions.losses as losses
-import parsimony.functions.penalties as penalties
-import parsimony.algorithms.proximal as proximal
-import parsimony.utils.weights as weights
+from .penalties import ZeroFunction, L1, LinearVariableConstraint, L2
 
 __all__ = ["CombinedFunction",
            "LinearRegressionL1L2TV", "LinearRegressionL1L2GL",
@@ -2297,7 +2294,11 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
             y_weighted = np.concatenate([y, np.sqrt(self.rho) * (z + u)])
             X_weighted, y_weighted = check_arrays(X_weighted, y_weighted)
 
-        function = functions.CombinedFunction()
+        from parsimony.functions import CombinedFunction
+        import parsimony.functions.losses as losses
+        import parsimony.functions.penalties as penalties
+
+        function = CombinedFunction()
         function.add_loss(losses.LinearRegression(X_weighted, y_weighted, mean=self.mean))
         function.add_prox(penalties.L1(l=self.l1,
                                        penalty_start=self.penalty_start))

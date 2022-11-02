@@ -8,19 +8,17 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   tommy.loefstedt@cea.fr
 @license: BSD 3-clause.
 """
-import numpy as np
 import matplotlib.pyplot as plot
+import numpy as np
+import parsimony.datasets.simulated.beta as beta_generate
+import parsimony.datasets.simulated.correlation_matrices \
+    as correlation_matrices
+import parsimony.datasets.simulated.l1_l2_tv as l1_l2_tv
 from time import time
 
 import parsimony.algorithms as algorithms
 import parsimony.functions as functions
-import parsimony.datasets.simulated.correlation_matrices \
-        as correlation_matrices
 import parsimony.utils as utils
-
-import parsimony.datasets.simulated.l1_l2_tv as l1_l2_tv
-import parsimony.datasets.simulated.beta as beta_generate
-
 
 np.random.seed(0)
 

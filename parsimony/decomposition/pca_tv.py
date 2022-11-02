@@ -11,23 +11,19 @@ Copyright (c) 2013-2019, CEA/DRF/Joliot/Neurospin. All rights reserved.
 __all__ = ["PCAL1L2TV"]
 
 import numpy as np
-import parsimony
-
 import warnings
 
-from parsimony.estimators import BaseEstimator
-
+import parsimony
 import parsimony.functions as functions
-import parsimony.functions.properties as properties
 import parsimony.functions.nesterov as nesterov
+import parsimony.functions.properties as properties
+import parsimony.utils.check_arrays as check_arrays
+import parsimony.utils.consts as consts
+import parsimony.utils.maths as maths
 import parsimony.utils.start_vectors as start_vectors
-
 from parsimony.algorithms import proximal
 from parsimony.algorithms.utils import Info
-
-import parsimony.utils.consts as consts
-import parsimony.utils.check_arrays as check_arrays
-import parsimony.utils.maths as maths
+from parsimony.estimators import BaseEstimator
 
 
 class Variance(properties.CompositeFunction,

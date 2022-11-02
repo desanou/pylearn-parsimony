@@ -19,10 +19,9 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 """
 import abc
 import copy
+import numpy as np
 import types
 from six import with_metaclass
-
-import numpy as np
 
 try:
     from . import properties  # Only works when imported as a package.

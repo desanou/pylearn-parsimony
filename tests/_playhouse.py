@@ -8,35 +8,32 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
+import cProfile as prof
+import hashlib
+import matplotlib.pyplot as plot
+import numpy as np
+import simulate
 import sys
 import time
-import hashlib
 
-import numpy as np
-import cProfile as prof
-import matplotlib.pyplot as plot
-
-from parsimony.functions import CombinedFunction
-import parsimony.functions.combinedfunctions as combinedfunctions
-import parsimony.algorithms.proximal as proximal
 import parsimony.algorithms.coordinate as coordinate
-from parsimony.algorithms.utils import Info
-import parsimony.functions as functions
-import parsimony.functions.penalties as penalties
-import parsimony.functions.nesterov.tv as tv
-import parsimony.functions.nesterov.l1tv as l1tv
-import parsimony.datasets.simulate.l1_l2_tvmu as l1_l2_tvmu
-import parsimony.utils.start_vectors as start_vectors
-import parsimony.utils.maths as maths
-import parsimony.utils.linalgs as linalgs
-import parsimony.estimators as estimators
-import parsimony.utils.consts as consts
-
-import parsimony.estimators as estimators
 import parsimony.algorithms.primaldual as primaldual
+import parsimony.algorithms.proximal as proximal
+import parsimony.datasets.simulate.l1_l2_tvmu as l1_l2_tvmu
+import parsimony.estimators as estimators
+import parsimony.estimators as estimators
+import parsimony.functions as functions
+import parsimony.functions.combinedfunctions as combinedfunctions
 import parsimony.functions.nesterov.l1tv as l1tv
-
-import simulate
+import parsimony.functions.nesterov.l1tv as l1tv
+import parsimony.functions.nesterov.tv as tv
+import parsimony.functions.penalties as penalties
+import parsimony.utils.consts as consts
+import parsimony.utils.linalgs as linalgs
+import parsimony.utils.maths as maths
+import parsimony.utils.start_vectors as start_vectors
+from parsimony.algorithms.utils import Info
+from parsimony.functions import CombinedFunction
 
 np.random.seed(42)
 

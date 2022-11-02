@@ -9,18 +9,18 @@ Copyright (c) 2013-2016, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @license: BSD 3-clause.
 """
 
+import matplotlib.pyplot as plt
 ###############################################################################
 # Data set
 import numpy as np
 import scipy.sparse as sparse
-import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
+
 import parsimony.datasets as datasets
 import parsimony.functions.nesterov.tv as nesterov_tv
-#import parsimony.estimators as estimators
-from parsimony.decomposition import PCAL1L2TV
-
 import parsimony.utils as utils
-from sklearn.metrics import r2_score
+# import parsimony.estimators as estimators
+from parsimony.decomposition import PCAL1L2TV
 
 ###############################################################################
 # Dataset made of 5 dots

@@ -8,24 +8,23 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   edouard.duchesnay@cea.fr
 @license: BSD 3-clause.
 """
-import time
-import hashlib
-import os.path
 import argparse
-import warnings
 import collections
-
+import hashlib
 import numpy as np
+import os.path
+import time
+import warnings
 
-import parsimony.functions.nesterov.tv as nesterov_tv
-import parsimony.estimators as estimators
 import parsimony.algorithms as algorithms
-import parsimony.utils as utils
-from parsimony.utils.penalties import l1_max_logistic_loss
-from parsimony.utils import mesh
 import parsimony.config as config
+import parsimony.estimators as estimators
 import parsimony.functions.nesterov.l1tv as l1tv
+import parsimony.functions.nesterov.tv as nesterov_tv
+import parsimony.utils as utils
 import parsimony.utils.weights as weights
+from parsimony.utils import mesh
+from parsimony.utils.penalties import l1_max_logistic_loss
 
 has_data = True
 if not config.get_boolean("tests", "allow_downloads", False):

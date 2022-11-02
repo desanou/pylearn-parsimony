@@ -26,14 +26,15 @@ try:
     has_timer = True
 except ImportError:
     has_timer = False
-import unittest
-from six import with_metaclass
 import abc
 import os
-# import re
+import unittest
+from six import with_metaclass
 
 import parsimony
 from parsimony.utils import is_windows
+
+# import re
 
 
 __all__ = ["TestCase", "test_all"]

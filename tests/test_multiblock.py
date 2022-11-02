@@ -8,12 +8,12 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
-from nose.tools import assert_less
-
 import numpy as np
+from nose.tools import assert_less
 
 import parsimony.algorithms.utils as utils
 import parsimony.functions.losses as losses
+
 try:
     from .tests import TestCase  # When imported as a package.
 except (ValueError, SystemError):

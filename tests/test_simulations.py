@@ -8,9 +8,8 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
-from nose.tools import assert_less, assert_equal
-
 import numpy as np
+from nose.tools import assert_less, assert_equal
 
 try:
     from .tests import TestCase  # When imported as a package.

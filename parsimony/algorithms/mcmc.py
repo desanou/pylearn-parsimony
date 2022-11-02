@@ -18,12 +18,10 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @license: BSD 3-clause.
 """
 import abc
-from six import with_metaclass
-
 import collections
-
 import numpy as np
 import scipy.stats as stat
+from six import with_metaclass
 
 try:
     from . import bases  # Only works when imported as a package.

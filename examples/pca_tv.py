@@ -13,6 +13,14 @@ import parsimony.functions.nesterov.tv as tv
 from parsimony.functions import PCA_L1_TV
 from parsimony.algorithms.multiblock import MultiblockProjectedGradientMethod
 import parsimony.utils.weights as weights
+# import numpy.random
+import numpy as np
+
+import parsimony.datasets
+import parsimony.functions.nesterov.tv as tv
+import parsimony.utils.weights as weights
+from parsimony.algorithms.multiblock import MultiblockProjectedGradientMethod
+from parsimony.functions import PCA_L1_TV
 
 n_samples = 500
 shape = (30, 30, 1)

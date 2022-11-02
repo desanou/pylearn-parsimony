@@ -9,16 +9,17 @@ Copyright (c) 2013-2016, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @license: BSD 3-clause.
 """
 
+import matplotlib.pyplot as plt
 ###############################################################################
 # Data set
 import numpy as np
 import scipy.sparse as sparse
-import matplotlib.pyplot as plt
-import parsimony.datasets as datasets
-import parsimony.functions.nesterov.tv as nesterov_tv
-import parsimony.estimators as estimators
-import parsimony.utils as utils
 from sklearn.metrics import r2_score
+
+import parsimony.datasets as datasets
+import parsimony.estimators as estimators
+import parsimony.functions.nesterov.tv as nesterov_tv
+import parsimony.utils as utils
 
 n_samples = 500
 shape = (5, 5, 1)

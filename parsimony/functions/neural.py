@@ -16,9 +16,8 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @license: BSD 3-clause.
 """
 import abc
-from six import with_metaclass
-
 import numpy as np
+from six import with_metaclass
 
 try:
     from . import properties  # Only works when imported as a package.

@@ -8,16 +8,16 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   jinpeng.li@cea.fr, lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
-import os
-import unittest
-import tempfile
-
 import numpy as np
+import os
 import scipy as sp
+import tempfile
+import unittest
 
+import parsimony.utils as utils
 from parsimony.algorithms.nipals import RankOneSVD
 from parsimony.algorithms.nipals import RankOneSparseSVD
-import parsimony.utils as utils
+
 try:
     from .tests import TestCase  # When imported as a package.
 except ValueError:

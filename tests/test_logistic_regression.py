@@ -8,11 +8,11 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
+import numpy as np
 from nose.tools import assert_less, assert_equal, assert_almost_equal
 
-import numpy as np
-
 import parsimony.utils.consts as consts
+
 try:
     from .tests import TestCase  # When imported as a package.
 except:
