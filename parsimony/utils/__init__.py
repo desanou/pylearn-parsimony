@@ -15,6 +15,7 @@ from . import mesh
 from . import penalties
 from . import plots
 from . import resampling
+from .utils import time_cpu, time_wall, time, deprecated, corr, project
 from . import stats
 from . import testing
 from . import weights
@@ -23,7 +24,7 @@ from .classif_label import class_weight_to_sample_weight, check_labels
 from .plots import map2d
 from .utils import is_windows, version, list_op
 from .utils import optimal_shrinkage, AnonymousClass
-from .utils import time_cpu, time_wall, time, deprecated, corr, project
+
 
 __all__ = ["time_cpu", "time_wall", "time", "deprecated", "corr", "project",
            "check_arrays", "check_array_in", "multiblock_array",

@@ -11,7 +11,7 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 import numpy as np
 
 from parsimony.utils import check_arrays
-from parsimony.utils import class_weight_to_sample_weight, check_labels
+from parsimony.utils.classif_label import class_weight_to_sample_weight, check_labels
 
 
 def l1_max_linear_loss(X, y, mean=True):

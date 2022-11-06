@@ -8,21 +8,23 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
+import parsimony.utils
 from . import losses
 from . import penalties
 from . import properties
 from . import step_sizes
-from .combinedfunctions import AugmentedLinearRegressionL1L2TV
+
 from .combinedfunctions import CombinedFunction
 from .combinedfunctions import LinearRegressionL1L2GL
-from .combinedfunctions import LinearRegressionL1L2TV
+from parsimony.functions.combinedfunctions import LinearRegressionL1L2TV
 from .combinedfunctions import LinearRegressionL2SmoothedL1TV
 from .combinedfunctions import LogisticRegressionL1L2GL
 from .combinedfunctions import LogisticRegressionL1L2TV
 from .combinedfunctions import PrincipalComponentAnalysisL1TV
+from .combinedfunctions import AugmentedLinearRegressionL1L2TV
+
 
 __all__ = ["properties", "losses", "penalties", "step_sizes",
-
            "CombinedFunction",
            "LinearRegressionL1L2TV", "LinearRegressionL1L2GL",
            "LogisticRegressionL1L2TV", "LogisticRegressionL1L2GL",

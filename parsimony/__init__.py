@@ -11,12 +11,15 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
-from parsimony import algorithms
+
+from parsimony import utils
 from parsimony import config
 from parsimony import datasets
-from parsimony import estimators
+from parsimony.functions.combinedfunctions import LinearRegressionL1L2TV
 from parsimony import functions
-from parsimony import utils
+from parsimony import algorithms
+from parsimony import estimators
+
 
 # WARNING! The following line is read by setup.py during install. Don't move or
 # change the syntax here unless you know exactly what you are doing!

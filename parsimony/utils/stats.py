@@ -16,7 +16,7 @@ try:
 except (ValueError, SystemError):
     from utils import consts  # When run as a program.
 try:
-    from . import deprecated  # When imported as a package.
+    from parsimony.utils import deprecated  # When imported as a package.
 except (ValueError, SystemError):
     from utils import deprecated  # When run as a program.
 

@@ -19,17 +19,17 @@ Copyright (c) 2013-2017, CEA/DSV/I2BM/Neurospin. All rights reserved.
 import copy
 import numpy as np
 
-try:
-    from . import bases  # When imported as a package.
-except (ImportError, ValueError):
-    import parsimony.algorithms.bases as bases  # When run as a program.
-
 import parsimony.utils as utils
 from parsimony.utils import check_arrays, check_array_in, multiblock_array
 import parsimony.utils.consts as consts
 from parsimony.algorithms.utils import Info, LinearKernel
 import parsimony.functions.properties as properties
 import parsimony.functions.multiblock.losses as mb_losses
+
+try:
+    from . import bases  # When imported as a package.
+except (ImportError, ValueError):
+    import parsimony.algorithms.bases as bases  # When run as a program.
 
 __all__ = ["SequentialMinimalOptimization", "MajorizationMinimization"]
 

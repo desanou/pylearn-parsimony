@@ -24,15 +24,16 @@ try:
 except ImportError:
     from scipy.interpolate import interp1d as interp1
 
-try:
-    from . import bases  # Only works when imported as a package.
-except (ValueError, SystemError):
-    import parsimony.algorithms.bases as bases  # When run as a program.
 import parsimony.utils as utils
 import parsimony.utils.maths as maths
 import parsimony.utils.consts as consts
 from parsimony.algorithms.utils import Info
 import parsimony.functions.properties as properties
+try:
+    from . import bases  # Only works when imported as a package.
+except (ValueError, SystemError):
+    import parsimony.algorithms.bases as bases  # When run as a program.
+
 #import parsimony.estimators.RegressionEstimator as RegressionEstimator
 
 

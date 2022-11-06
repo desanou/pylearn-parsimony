@@ -8,6 +8,7 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 @email:   lofstedt.tommy@gmail.com
 @license: BSD 3-clause.
 """
+import parsimony.functions
 from parsimony.algorithms import algorithms
 from parsimony.algorithms import bases
 from parsimony.algorithms import cluster
