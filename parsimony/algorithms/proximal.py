@@ -509,7 +509,7 @@ class CONESTA(bases.ExplicitAlgorithm,
         returned.
 
     max_iter : int
-        Non-negative integer. Maximum allowed number of iterations.
+        Non-negative integer. Maximum allowed number of iterations for the Fista step
 
     min_iter : int
         Non-negative integer less than or equal to max_iter. Minimum number of
@@ -637,7 +637,7 @@ class CONESTA(bases.ExplicitAlgorithm,
 
             # Set current parameters to algorithm.
             algorithm.set_params(eps=eps_mu,
-                                 max_iter=self.max_iter - self.num_iter)
+                                 max_iter=self.max_iter)
             # Run FISTA.
             beta = algorithm.run(function, beta)
 
