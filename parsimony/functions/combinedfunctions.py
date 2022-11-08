@@ -43,7 +43,8 @@ __all__ = ["CombinedFunction",
            "LogisticRegressionL1L2TV", "LogisticRegressionL1L2GL",
            "LinearRegressionL2SmoothedL1TV",
            "AugmentedLinearRegressionL1L2TV", "AugmentedLinearRegressionMglasso"
-           "PrincipalComponentAnalysisL1TV"]
+                                              "PrincipalComponentAnalysisL1TV"]
+
 
 # TODO: Add penalty_start and mean to all of these!
 
@@ -91,6 +92,7 @@ class CombinedFunction(properties.CompositeFunction,
     constraints : list of ProjectionOperator
         A list of the constraints of the function.
     """
+
     def __init__(self, functions=[], penalties=[], smoothed=[], prox=[],
                  constraints=[]):
 
@@ -569,8 +571,8 @@ class LinearRegressionL1(properties.CompositeFunction,
     mean : Boolean. Whether to compute the squared loss or the mean
             squared loss. Default is True, the mean squared loss.
     """
-    def __init__(self, X, y, l1, penalty_start=0, mean=True):
 
+    def __init__(self, X, y, l1, penalty_start=0, mean=True):
         self.X = X
         self.y = y
 
@@ -679,6 +681,7 @@ class LinearRegressionL1L2TV(properties.CompositeFunction,
     mean : Boolean. Whether to compute the squared loss or the mean
             squared loss. Default is True, the mean squared loss.
     """
+
     def __init__(self, X, y, l1, l2, tv, A=None, mu=0.0, penalty_start=0,
                  mean=True):
         self.X = X
@@ -739,8 +742,8 @@ class LinearRegressionL1L2TV(properties.CompositeFunction,
         """Function value.
         """
         return self.rr.f(beta) \
-             + self.l1.f(beta) \
-             + self.tv.f(beta)
+               + self.l1.f(beta) \
+               + self.tv.f(beta)
 
     def fmu(self, beta, mu=None):
         """Function value.
@@ -2163,24 +2166,26 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
         self.u = u
         self.l1 = l1
         self.tv = tv
+
+
         class TVp(properties.ProximalOperator):
 
             def __init__(self, tv):
-                #self.l1 = float(l1)
+                # self.l1 = float(l1)
                 self.tv = float(tv)
                 # self.p = max(1, int(p))
 
-                #self.g = L1(l1)
+                # self.g = L1(l1)
                 self.h = L2(tv)
 
             def reset(self):
-                #self.g.reset()
+                # self.g.reset()
                 self.h.reset()
 
             def f(self, x):
                 """Function value.
                 """
-                #x1 = x[:self.p, :]
+                # x1 = x[:self.p, :]
                 # x2 = x[self.p:, :]
                 x2 = x
 
@@ -2188,16 +2193,29 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
                 #        + self.h.f(x2)
                 return self.h.f(x2)
 
-            def prox(self, x, factor=1.0):
+            def prox(self, x, m, k, factor=1.0):
                 # x1 = x[:self.p, :]
                 # x2 = x[self.p:, :]
-                x2 = x
 
                 # y = np.vstack((self.g.prox(x1, factor=factor,
                 #                            eps=eps, max_iter=max_iter),
                 #                self.h.prox(x2, factor=factor,
                 #                            eps=eps, max_iter=max_iter)))
-                y = self.h.prox(x2, factor=factor)
+
+                # old_shape = x.shape
+                # x2 = np.array_split(x, 4).hstack().ravel().reshape(old_shape)
+                if self.tv == 0:
+                    old_shape = x.shape
+                    y = np.zeros(old_shape)
+
+                else:
+                    y = [0.0] * m
+                    for i in range(m):
+                        mx = x[i * k: i * k + k]
+                        # mx = x[range(i, len(x), m)]
+                        y[i] = self.h.prox(mx, factor=factor)
+                    y = np.vstack(y)
+                    # y = np.hstack(y).ravel().reshape(old_shape)
 
                 return y
 
@@ -2286,13 +2304,24 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
     def betahat(self, z=None, u=None, eps=consts.TOLERANCE, max_iter=consts.MAX_ITER, info=list(), beta=None):
         X, y = check_arrays(self.X, self.y)
 
+        A = self.A
+        B = [0.0] * A[0].shape[0]
+        for i in range(A[0].shape[0]):
+            B[i] = A[0][i,]
+            for j in range(1, len(A)):
+                B[i] = sparse.vstack([B[i], A[j][i,]])
+
         if self.tv == 0.0:
             X_weighted = X
             y_weighted = y
         else:
-            X_weighted = sparse.vstack((X, sparse.vstack(self.A))).toarray()
+            X_weighted = sparse.vstack((X, sparse.vstack(B))).toarray()
             y_weighted = np.concatenate([y, np.sqrt(self.rho) * (z + u)])
             X_weighted, y_weighted = check_arrays(X_weighted, y_weighted)
+
+        # import sklearn.preprocessing
+        # X_weighted = sklearn.preprocessing.scale(X_weighted)
+        # y_weighted = sklearn.preprocessing.scale(y_weighted, with_std=False)
 
         from parsimony.functions import CombinedFunction
         import parsimony.functions.losses as losses
@@ -2311,10 +2340,12 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
 
         self.beta_ = beta_hat
 
+        # print("iter fist ", fista.num_iter)
+
         return [fista, beta_hat]
 
     def reset(self):
-        #self.g.reset()
+        # self.g.reset()
         self.h.reset()
 
     def f(self, beta_):

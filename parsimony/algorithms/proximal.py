@@ -19,22 +19,24 @@ Copyright (c) 2013-2014, CEA/DSV/I2BM/Neurospin. All rights reserved.
 """
 import numpy as np
 import warnings
+
 try:
     from scipy.interpolate import PchipInterpolator as interp1
 except ImportError:
     from scipy.interpolate import interp1d as interp1
-
+from scipy import sparse
 import parsimony.utils as utils
 import parsimony.utils.maths as maths
 import parsimony.utils.consts as consts
 from parsimony.algorithms.utils import Info
 import parsimony.functions.properties as properties
+
 try:
     from . import bases  # Only works when imported as a package.
 except (ValueError, SystemError):
     import parsimony.algorithms.bases as bases  # When run as a program.
 
-#import parsimony.estimators.RegressionEstimator as RegressionEstimator
+# import parsimony.estimators.RegressionEstimator as RegressionEstimator
 
 
 __all__ = ["ISTA", "FISTA", "CONESTA", "StaticCONESTA",
@@ -391,7 +393,7 @@ class FISTA(bases.ExplicitAlgorithm,
             best_f = np.inf
             best_beta = None
 
-        #print("########", max(self.min_iter, self.max_iter) + 1)
+        # print("########", max(self.min_iter, self.max_iter) + 1)
         for i in range(1, max(self.min_iter, self.max_iter) + 1):
 
             if self.info_requested(Info.time):
@@ -610,7 +612,7 @@ class CONESTA(bases.ExplicitAlgorithm,
         if loop:  # mu is useless if loop is False
             mu = function.mu_opt(eps)
             function.set_mu(mu)
-        #gM = function.eps_max(1.0)
+        # gM = function.eps_max(1.0)
 
         # Initialise info variables. Info variables have the suffix "_".
         if self.info_requested(Info.time):
@@ -688,10 +690,10 @@ class CONESTA(bases.ExplicitAlgorithm,
                 break
 
             # Update the precision eps.
-#            eps = self.tau * (gap_mu + mu * gM)
+            #            eps = self.tau * (gap_mu + mu * gM)
             eps = max(self.eps, self.tau * (gap_mu + mu * gM))
             # Compute and update mu.
-#            mu = max(self.mu_min, min(function.mu_opt(eps), mu))
+            #            mu = max(self.mu_min, min(function.mu_opt(eps), mu))
             mu = min(function.mu_opt(eps), mu)
             function.set_mu(mu)
 
@@ -995,7 +997,7 @@ class StaticCONESTA(bases.ExplicitAlgorithm,
         return beta
 
 
-#class ProjectionADMM(bases.ExplicitAlgorithm):
+# class ProjectionADMM(bases.ExplicitAlgorithm):
 #    """ The Alternating direction method of multipliers, where the functions
 #    have projection operators onto the corresponding convex sets.
 #    """
@@ -1085,7 +1087,7 @@ class ADMM(bases.ExplicitAlgorithm,
                  info=[],
                  eps=consts.TOLERANCE, max_iter=consts.MAX_ITER, min_iter=1,
                  simulation=False):
-                 # TODO: Investigate what is a good default value here!
+        # TODO: Investigate what is a good default value here!
 
         super(ADMM, self).__init__(info=info,
                                    max_iter=max_iter,
@@ -1163,7 +1165,7 @@ class ADMM(bases.ExplicitAlgorithm,
                 if i == 1:
                     if maths.norm(x_new - x_old) < self.eps \
                             and i >= self.min_iter:
-#                        print "Stopping criterion kicked in!"
+                        #                        print "Stopping criterion kicked in!"
                         if self.info_requested(Info.converged):
                             self.info_set(Info.converged, True)
 
@@ -1171,7 +1173,7 @@ class ADMM(bases.ExplicitAlgorithm,
                 else:
                     if maths.norm(x_new - x_old) / maths.norm(x_old) < self.eps \
                             and i >= self.min_iter:
-#                        print "Stopping criterion kicked in!"
+                        #                        print "Stopping criterion kicked in!"
                         if self.info_requested(Info.converged):
                             self.info_set(Info.converged, True)
 
@@ -1183,8 +1185,8 @@ class ADMM(bases.ExplicitAlgorithm,
                 s = (z_new - z_old) * -self.rho
                 norm_r = maths.norm(r)
                 norm_s = maths.norm(s)
-#                print "norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", \
-#                    self.rho
+                #                print "norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", \
+                #                    self.rho
 
                 if norm_r > self.mu * norm_s:
                     self.rho *= self.tau
@@ -1211,8 +1213,8 @@ class ADMM(bases.ExplicitAlgorithm,
 
 
 class ADMMglasso(bases.ExplicitAlgorithm,
-           bases.IterativeAlgorithm,
-           bases.InformationAlgorithm):
+                 bases.IterativeAlgorithm,
+                 bases.InformationAlgorithm):
     """The alternating direction method of multipliers (ADMM). Computes the
     minimum of the sum of two functions with associated proximal or projection
     operators. Solves problems on the form
@@ -1255,27 +1257,29 @@ class ADMMglasso(bases.ExplicitAlgorithm,
                      Info.admm_iter,
                      Info.fista_iter]
 
-    def __init__(self, rho=1.0, mu=10.0, tau=2.0,
-                 info=[], A = None,
+    def __init__(self, rho=1.0, mu=10.0, tau_incr=2.0, tau_decr=2.0,
+                 info=[], A=None,
                  eps=consts.TOLERANCE, max_iter=consts.MAX_ITER, min_iter=1,
                  simulation=False):
-                 # TODO: Investigate what is a good default value here!
+        # TODO: Investigate what is a good default value here!
 
         super(ADMMglasso, self).__init__(info=info,
-                                   max_iter=max_iter,
-                                   min_iter=min_iter)
+                                         max_iter=max_iter,
+                                         min_iter=min_iter)
 
         self.rho = max(consts.FLOAT_EPSILON, float(rho))
         self.mu = max(1.0, float(mu))
-        self.tau = max(1.0, float(tau))
+        self.tau_incr = max(1.0, float(tau_incr))
+        self.tau_decr = max(1.0, float(tau_decr))
         self.A = A
 
         self.eps = max(consts.FLOAT_EPSILON, float(eps))
 
         self.simulation = bool(simulation)
+
     @bases.force_reset
     @bases.check_compatibility
-    def run(self, functions, xy, A):
+    def run(self, functions, xy, A, tv):
         """Finds the minimum of two functions with one with proximal
         operator and the other via reweighted lasso.
 
@@ -1306,31 +1310,45 @@ class ADMMglasso(bases.ExplicitAlgorithm,
             niter_fista = []
 
         x_new = xy[0]
-        y_new = xy[1]
-        z_new = y_new.copy()
-        u_new = y_new.copy()
+        # Bx_new = xy[1]
+        z_new = xy[1]
+        u_new = xy[1]
 
-        for i in range(1, self.max_iter + 1):
+        # re-order A components per differences
+        B = [0.0] * A[0].shape[0]
+        for ii in range(A[0].shape[0]):
+            B[ii] = A[0][ii, ]
+            for jj in range(1, len(A)):
+                B[ii] = sparse.vstack([B[ii], A[jj][ii, ]])
+
+        Bx_new = [0.0] * len(B)
+        for ii in range(len(B)):
+            Bx_new[ii] = B[ii].dot(x_new)
+        Bx_new = np.vstack(Bx_new)
+
+        for counter in range(1, self.max_iter + 1):
 
             if self.info_requested(Info.time):
                 tm = utils.time_cpu()
 
             x_old = x_new
+            Bx_old = Bx_new
             z_old = z_new
             u_old = u_new
 
-            Ax = [0.0] * len(self.A)
-            for i in range(len(self.A)):
-                Ax[i] = A[i].dot(x_new)
-            Ax = np.vstack(Ax)
-            y_new = Ax
-
-            eval_func = functions.betahat(z=z_old, u=u_old, eps=self.eps, max_iter=self.max_iter, info=fista_info)
+            z_new = functions.h.prox(Bx_old - u_old, A[0].shape[0], len(self.A))
+            eval_func = functions.betahat(z=z_new, u=u_old, eps=self.eps, max_iter=self.max_iter, info=fista_info)
             fista = eval_func[0]
             x_new = eval_func[1]
-            z_new = functions.h.prox(y_new - u_old)
 
-            u_new = (- y_new + z_new) + u_old
+            Bx_new = [0.0] * len(B)
+            for ii in range(len(B)):
+                Bx_new[ii] = B[ii].dot(x_new)
+            Bx_new = np.vstack(Bx_new)
+
+            u_new = u_old + (z_new - Bx_new)
+            if tv == 0:
+                u_new *= 0.0
 
             # Update global iteration counter.
             self.num_iter += fista.num_iter
@@ -1345,18 +1363,23 @@ class ADMMglasso(bases.ExplicitAlgorithm,
                 niter_fista.append(fista.num_iter)
 
             if not self.simulation:
-                if i == 1:
-                    if maths.norm(x_new - x_old) < self.eps \
-                            and i >= self.min_iter:
-#                        print "Stopping criterion kicked in!"
+                # stopping criterion boyd
+
+
+                if counter == 1:
+                    if max(maths.norm(x_new - x_old), maths.norm(z_new - z_old), maths.norm(u_new - u_old)) < self.eps \
+                            and counter >= self.min_iter:
+                        #                        print "Stopping criterion kicked in!"
                         if self.info_requested(Info.converged):
                             self.info_set(Info.converged, True)
 
                         break
                 else:
-                    if maths.norm(x_new - x_old) / maths.norm(x_old) < self.eps \
-                            and i >= self.min_iter:
-#                        print "Stopping criterion kicked in!"
+                    # print(" x : ", maths.norm(x_new - x_old), "z :", maths.norm(z_new - z_old), "u : ", maths.norm(u_new - u_old))
+
+                    if max(maths.norm(x_new - x_old), maths.norm(z_new - z_old), maths.norm(u_new - u_old)) < self.eps \
+                            and counter >= self.min_iter:
+                        #                        print "Stopping criterion kicked in!"
                         if self.info_requested(Info.converged):
                             self.info_set(Info.converged, True)
 
@@ -1364,19 +1387,33 @@ class ADMMglasso(bases.ExplicitAlgorithm,
 
             # Update the penalty parameter, rho, dynamically.
             if self.mu > 1.0:
-                r = -y_new + z_new
-                s = (z_new - z_old) * -self.rho
+                Bz_old = [0.0] * len(B)
+                dimB = B[0].shape[0]
+                for ii in range(len(B)):
+                    Bz_old[ii] = B[ii].transpose().dot(z_old[ii * dimB: ii * dimB + dimB])
+                Bz_old = np.hstack(Bz_old)
+                Bz_old = np.sum(Bz_old, axis=1).reshape(x_old.shape)
+
+                Bz_new = [0.0] * len(B)
+                dimB = B[0].shape[0]
+                for ii in range(len(B)):
+                    Bz_new[ii] = B[ii].transpose().dot(z_new[ii * dimB: ii * dimB + dimB])
+                Bz_new = np.hstack(Bz_new)
+                Bz_new = np.sum(Bz_new, axis=1).reshape(x_new.shape)
+
+                r = -Bx_new + z_new
+                s = (Bz_new - Bz_old) * -self.rho
                 norm_r = maths.norm(r)
                 norm_s = maths.norm(s)
-#                print "norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", \
-#                    self.rho
+
+                # print("norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", self.rho)
 
                 if norm_r > self.mu * norm_s:
-                    self.rho *= self.tau
-                    u_new *= 1.0 / self.tau  # Rescale dual variable.
+                    self.rho *= self.tau_incr
+                    u_new *= 1.0 / self.tau_incr  # Rescale dual variable.
                 elif norm_s > self.mu * norm_r:
-                    self.rho /= self.tau
-                    u_new *= self.tau  # Rescale dual variable.
+                    self.rho /= self.tau_decr
+                    u_new *= self.tau_decr  # Rescale dual variable.
 
                 # Update the penalty parameter in the functions.
                 functions.set_rho(self.rho)
@@ -1390,12 +1427,11 @@ class ADMMglasso(bases.ExplicitAlgorithm,
         if self.info_requested(Info.ok):
             self.info_set(Info.ok, True)
         if self.info_requested(Info.admm_iter):
-            self.info_set(Info.admm_iter, i-1)
+            self.info_set(Info.admm_iter, counter)
         if self.info_requested(Info.fista_iter):
             self.info_set(Info.fista_iter, niter_fista)
 
         return x_new
-
 
 
 class DykstrasProximalAlgorithm(bases.ExplicitAlgorithm):
@@ -1408,7 +1444,7 @@ class DykstrasProximalAlgorithm(bases.ExplicitAlgorithm):
                   properties.ProximalOperator]
 
     def __init__(self, eps=consts.TOLERANCE, max_iter=1000, min_iter=1):
-                 # TODO: Investigate what good default value are here!
+        # TODO: Investigate what good default value are here!
 
         self.eps = eps
         self.max_iter = max_iter
@@ -1460,7 +1496,7 @@ class DykstrasProjectionAlgorithm(bases.ExplicitAlgorithm):
                   properties.ProjectionOperator]
 
     def __init__(self, eps=consts.TOLERANCE, max_iter=1000, min_iter=1):
-                 # TODO: Investigate what good default values are here!
+        # TODO: Investigate what good default values are here!
 
         self.eps = eps
         self.max_iter = max_iter
@@ -1515,7 +1551,7 @@ class ParallelDykstrasProjectionAlgorithm(bases.ExplicitAlgorithm):
 
     def __init__(self, eps=consts.TOLERANCE,
                  max_iter=100, min_iter=1):
-                 # TODO: Investigate what is a good default value here!
+        # TODO: Investigate what is a good default value here!
 
         self.eps = eps
         self.max_iter = max_iter
@@ -1587,7 +1623,7 @@ class ParallelDykstrasProximalAlgorithm(bases.ExplicitAlgorithm):
 
     def __init__(self, eps=consts.TOLERANCE,
                  max_iter=100, min_iter=1):
-                 # TODO: Investigate what is a good default value here!
+        # TODO: Investigate what is a good default value here!
 
         self.eps = eps
         self.max_iter = max_iter
@@ -1662,4 +1698,5 @@ class ParallelDykstrasProximalAlgorithm(bases.ExplicitAlgorithm):
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()
