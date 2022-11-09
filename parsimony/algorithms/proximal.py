@@ -1309,10 +1309,13 @@ class ADMMglasso(bases.ExplicitAlgorithm,
         if self.info_requested(Info.fista_iter):
             niter_fista = []
 
+        #functions.set_rho(self.rho)
+
         x_new = xy[0]
         # Bx_new = xy[1]
         z_new = xy[1]
         u_new = xy[1]
+        delta_new = 0
 
         # re-order A components per differences
         B = [0.0] * A[0].shape[0]
@@ -1363,26 +1366,37 @@ class ADMMglasso(bases.ExplicitAlgorithm,
                 niter_fista.append(fista.num_iter)
 
             if not self.simulation:
+                # stopping criterion chan
+                delta_old = delta_new
+                delta_new = (maths.norm(x_new - x_old))/np.sqrt(x_new.shape[0]) + \
+                        (maths.norm(z_new - z_old))/np.sqrt(z_new.shape[0]) + \
+                        (maths.norm(u_new - u_old))/np.sqrt(u_new.shape[0])
+
+
+                # if delta_new >= self.mu * delta_old:
+                #     self.rho *= self.tau_incr
+                #     u_new *= 1.0 / self.tau_incr  # Rescale dual variable.
+                #     functions.set_rho(self.rho)
+                #     print(" rho in admm: ", self.rho)
+
+
                 # stopping criterion boyd
-
-
                 if counter == 1:
-                    if max(maths.norm(x_new - x_old), maths.norm(z_new - z_old), maths.norm(u_new - u_old)) < self.eps \
-                            and counter >= self.min_iter:
+                    if delta_new < self.eps and counter >= self.min_iter:
                         #                        print "Stopping criterion kicked in!"
                         if self.info_requested(Info.converged):
                             self.info_set(Info.converged, True)
-
                         break
                 else:
-                    # print(" x : ", maths.norm(x_new - x_old), "z :", maths.norm(z_new - z_old), "u : ", maths.norm(u_new - u_old))
+                    print(" x : ", maths.norm(x_new - x_old), "z :", maths.norm(z_new - z_old), "u : ", maths.norm(u_new - u_old))
+                    print(" dx : ", x_new.shape[0], "dz :", z_new.shape[0], "du : ", u_new.shape[0])
+                    print(" delta : ", delta_new)
 
-                    if max(maths.norm(x_new - x_old), maths.norm(z_new - z_old), maths.norm(u_new - u_old)) < self.eps \
+                    if delta_new < self.eps \
                             and counter >= self.min_iter:
                         #                        print "Stopping criterion kicked in!"
                         if self.info_requested(Info.converged):
                             self.info_set(Info.converged, True)
-
                         break
 
             # Update the penalty parameter, rho, dynamically.
@@ -1406,7 +1420,7 @@ class ADMMglasso(bases.ExplicitAlgorithm,
                 norm_r = maths.norm(r)
                 norm_s = maths.norm(s)
 
-                # print("norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", self.rho)
+                print("norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", self.rho)
 
                 if norm_r > self.mu * norm_s:
                     self.rho *= self.tau_incr

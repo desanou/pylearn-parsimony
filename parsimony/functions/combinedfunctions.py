@@ -2154,7 +2154,7 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
             squared loss. Default is True, the mean squared loss.
     """
 
-    def __init__(self, X, y, l1, tv, A=None, z=None, u=None, rho=1.0, penalty_start=0,
+    def __init__(self, X, y, l1, tv, A=None, z=None, u=None, rho=None, penalty_start=0,
                  mean=False):
 
         super(AugmentedLinearRegressionMglasso, self).__init__(rho=rho)
@@ -2167,16 +2167,13 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
         self.l1 = l1
         self.tv = tv
 
-
         class TVp(properties.ProximalOperator):
 
-            def __init__(self, tv):
-                # self.l1 = float(l1)
-                self.tv = float(tv)
-                # self.p = max(1, int(p))
+            def __init__(self, tv, rho):
 
-                # self.g = L1(l1)
-                self.h = L2(tv)
+                self.tv = float(tv)
+                self.rho = rho
+                self.h = L2(tv/rho)
 
             def reset(self):
                 # self.g.reset()
@@ -2204,6 +2201,8 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
 
                 # old_shape = x.shape
                 # x2 = np.array_split(x, 4).hstack().ravel().reshape(old_shape)
+
+
                 if self.tv == 0:
                     old_shape = x.shape
                     y = np.zeros(old_shape)
@@ -2219,83 +2218,7 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
 
                 return y
 
-        # class WeightedLasso(estimators.RegressionEstimator):
-        #     def __init__(self, l1, A, rho, z, u,
-        #                  algorithm=None, algorithm_params=dict(),
-        #                  start_vector=weights.RandomUniformWeights(normalise=True),
-        #                  penalty_start=penalty_start,
-        #                  mean=mean):
-        #
-        #         if algorithm is None:
-        #             algorithm = proximal.FISTA(**algorithm_params)
-        #         else:
-        #             algorithm.set_params(**algorithm_params)
-        #
-        #         super(WeightedLasso, self).__init__(algorithm=algorithm,
-        #                                     start_vector=start_vector)
-        #
-        #         self.l1 = float(l1)
-        #         self.A = A
-        #         self.rho = rho
-        #         self.u = u
-        #         self.z = z
-        #         self.penalty_start = int(penalty_start)
-        #         self.mean = bool(mean)
-        #
-        #     def get_params(self):
-        #         return {"l": self.l,
-        #                 "penalty_start": self.penalty_start,
-        #                 "mean": self.mean}
-        #
-        #     def fit(self, z, u, beta=None):
-        #         X, y = check_arrays(X, y)
-        #         X_weighted = np.vstack(X, A)
-        #         y_weighted = np.concatenate([y, np.sqrt(rho)*(z + u)])
-        #         X_weighted, y_weighted = check_arrays(X_weighted, y_weighted)
-        #
-        #         function = functions.CombinedFunction()
-        #         function.add_loss(losses.LinearRegression(X_weighted, y_weighted, mean=self.mean))
-        #         function.add_prox(penalties.L1(l=self.l1,
-        #                                        penalty_start=self.penalty_start))
-        #
-        #         self.algorithm.check_compatibility(function,
-        #                                            self.algorithm.INTERFACES)
-        #
-        #         # TODO: Should we use a seed here so that we get deterministic results?
-        #         if beta is None:
-        #             beta = self.start_vector.get_weights(X_weighted.shape[1])
-        #
-        #         self.beta = self.algorithm.run(function, beta)
-        #
-        #         return self.beta
-        #
-        #     def reset(self):
-        #         """Resets the estimator such that it is as if just created.
-        #         """
-        #         if hasattr(self, "beta"):
-        #             del self.beta
-        #
-        #         if hasattr(self.algorithm, "reset"):
-        #             self.algorithm.reset()
-        #
-        #     def score(self, X, y):
-        #         """Returns the (mean) squared error of the estimator.
-        #         """
-        #         X, y = check_arrays(X, y)
-        #         X_weighted = np.vstack(X, A)
-        #         y_weighted = np.concatenate([y, np.sqrt(rho)*(z + u)])
-        #         X_weighted, y_weighted = check_arrays(X_weighted, y_weighted)
-        #
-        #         n, p = X_weighted.shape
-        #         y_weighted_hat = np.dot(X_weighted, self.beta)
-        #         err = np.sum((y_weighted_hat - y_weighted) ** 2)
-        #         if self.mean:
-        #             err /= float(n)
-        #
-        #         return err
-
-        self.h = TVp(tv / rho)
-
+        self.h = TVp(tv, rho)
         self.penalty_start = max(0, int(penalty_start))
         self.mean = bool(mean)
 
@@ -2340,7 +2263,7 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
 
         self.beta_ = beta_hat
 
-        # print("iter fist ", fista.num_iter)
+        print("iter fist ", fista.num_iter)
 
         return [fista, beta_hat]
 
@@ -2385,6 +2308,8 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
         From the interface "AugmentedProximalOperator".
         """
         rho = max(0.0, float(rho))
+        self.h.rho = rho
+        self.h.h.l = self.h.tv/rho
         self.rho = rho
 
 
