@@ -2263,7 +2263,7 @@ class AugmentedLinearRegressionMglasso(properties.SplittableFunction,
 
         self.beta_ = beta_hat
 
-        print("iter fist ", fista.num_iter)
+        print("niter fista ", fista.num_iter, "rho_aug :", self.rho)
 
         return [fista, beta_hat]
 

@@ -26,7 +26,8 @@ except (ValueError, SystemError):
     import parsimony.functions.properties as properties  # Run as a script.
 import parsimony.utils as utils
 import parsimony.utils.consts as consts
-
+from parsimony.datasets.simulate.utils import RandomUniform
+import parsimony.utils.maths as maths
 
 __all__ = ["LinearRegression", "RidgeRegression",
            "LogisticRegression", "RidgeLogisticRegression",
@@ -44,6 +45,7 @@ class LinearRegression(properties.CompositeFunction,
 
         f(beta) = (1 / 2n) * ||y - X.beta||²_2.
     """
+
     def __init__(self, X, y, mean=True):
         """
         Parameters
@@ -154,14 +156,14 @@ class LinearRegression(properties.CompositeFunction,
             # Rough limits for when RankOneSVD is faster than np.linalg.svd.
             n, p = self.X.shape
             if (max(n, p) > 500 and max(n, p) <= 1000
-                    and float(max(n, p)) / min(n, p) <= 1.3) \
-               or (max(n, p) > 1000 and max(n, p) <= 5000
-                    and float(max(n, p)) / min(n, p) <= 5.0) \
-               or (max(n, p) > 5000 and max(n, p) <= 10000
-                    and float(max(n, p)) / min(n, p) <= 15.0) \
-               or (max(n, p) > 10000 and max(n, p) <= 20000
-                    and float(max(n, p)) / min(n, p) <= 200.0) \
-               or max(n, p) > 10000:
+                and float(max(n, p)) / min(n, p) <= 1.3) \
+                    or (max(n, p) > 1000 and max(n, p) <= 5000
+                        and float(max(n, p)) / min(n, p) <= 5.0) \
+                    or (max(n, p) > 5000 and max(n, p) <= 10000
+                        and float(max(n, p)) / min(n, p) <= 15.0) \
+                    or (max(n, p) > 10000 and max(n, p) <= 20000
+                        and float(max(n, p)) / min(n, p) <= 200.0) \
+                    or max(n, p) > 10000:
 
                 v = RankOneSVD(max_iter=1000).run(self.X)
                 us = np.dot(self.X, v)
@@ -199,6 +201,7 @@ class RidgeRegression(properties.CompositeFunction,
 
     where ||.||²_2 is the L2 norm.
     """
+
     # TODO: Inherit from LinearRegression and add an L2 constraint instead!
     def __init__(self, X, y, k, penalty_start=0, mean=True):
         """
@@ -352,6 +355,143 @@ class RidgeRegression(properties.CompositeFunction,
         return 1.0 / self.L()
 
 
+class MGLassoRegression(properties.Function,
+                        properties.SubGradient):
+    """The MGLasso Regression function, i.e. a representation of
+
+        f(x) = (0.5) * ||Xb - y||²_2 + ...
+
+    where ||.||²_2 is the L2 norm.
+    """
+
+    def __init__(self, X, y, l1, tv, A, penalty_start=0, mean=False, rng=RandomUniform(0, 1)):
+        """
+        Parameters
+        ----------
+        X : Numpy array (n-by-p). The regressor matrix.
+
+        y : Numpy array (n-by-1). The regressand vector.
+
+        l : Non-negative float. The MGLasso parameter.
+
+        tv : Non-negative float. The MGLasso parameter.
+
+        penalty_start : Non-negative integer. The number of columns, variables
+                etc., to except from penalisation. Equivalently, the first
+                index to be penalised. Default is 0, all columns are included.
+
+        mean : Boolean. Whether to compute the squared loss or the mean
+                squared loss. Default is True, the mean squared loss.
+        """
+        self.X = X
+        self.y = y
+        self.l1 = max(0.0, float(l1))
+        self.tv = max(0.0, float(tv))
+        self.A = A
+        self.rng = rng
+
+        self.penalty_start = max(0, int(penalty_start))
+        self.mean = bool(mean)
+
+    def f(self, beta):
+        """Function value.
+
+        From the interface "Function".
+
+        Parameters
+        ----------
+        beta : Numpy array. Regression coefficient vector. The point at which
+                to evaluate the function.
+        """
+        if self.penalty_start > 0:
+            beta_ = beta[self.penalty_start:, :]
+        else:
+            beta_ = beta
+
+        if self.mean:
+            d = 2.0 * float(self.X.shape[0])
+        else:
+            d = 2.0
+
+        A = self.A
+        abeta2 = A[0].dot(beta_) ** 2
+        for k in range(1, len(A)):
+            abeta2 += A[k].dot(beta_) ** 2
+
+        f = (1.0 / d) * np.sum((np.dot(self.X, beta_) - self.y) ** 2) \
+            + self.l1 * maths.norm1(beta_) \
+            + self.tv * np.sum(np.sqrt(abeta2))
+
+        return f
+
+    def subgrad(self, beta):
+        """subgradient of the function at beta.
+
+        From the interface "Gradient".
+
+        Parameters
+        ----------
+        beta : Numpy array. The point at which to evaluate the gradient.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from parsimony.functions.losses import MGLassoRegression
+        >>>
+        >>> np.random.seed(42)
+        >>> X = np.random.rand(100, 150)
+        >>> y = np.random.rand(100, 1)
+        >>> rr = MGLassoRegression(X=X, y=y, k=3.14159265)
+        >>> beta = np.random.rand(150, 1)
+        >>> np.linalg.norm(rr.subgrad(beta)
+        ...       - rr.approx_grad(beta, eps=1e-4)) < 5e-8
+        True
+        """
+
+        # OLS
+        gradOLS = np.dot((np.dot(self.X, beta) - self.y).T, self.X).T
+        if self.mean:
+            gradOLS *= 1.0 / float(self.X.shape[0])
+
+        # L1
+        grad = np.zeros((beta.shape[0], 1))
+        grad[beta >= consts.TOLERANCE] = 1.0
+        grad[beta <= -consts.TOLERANCE] = -1.0
+        between = (beta > -consts.TOLERANCE) & (beta < consts.TOLERANCE)
+        grad[between] = self.rng(between.sum())
+        gradL1 = self.l1 * grad
+
+        # TOTAL VARIATION
+        beta_flat = beta.ravel()
+        Ab = np.vstack([Ai.dot(beta_flat) for Ai in self.A]).T
+        Ab_norm2 = np.sqrt(np.sum(Ab ** 2.0, axis=1))
+        upper = Ab_norm2 > consts.TOLERANCE
+        grad_Ab_norm2 = Ab
+        grad_Ab_norm2[upper] = (Ab[upper].T / Ab_norm2[upper]).T
+        lower = Ab_norm2 <= consts.TOLERANCE
+        n_lower = lower.sum()
+        if n_lower:
+            D = len(self.A)
+            vec_rnd = (self.rng(n_lower, D) * 2.0) - 1.0
+            norm_vec = np.sqrt(np.sum(vec_rnd ** 2.0, axis=1))
+            a = self.rng(n_lower)
+            grad_Ab_norm2[lower] = (vec_rnd.T * (a / norm_vec)).T
+        grad = np.vstack([self.A[i].T.dot(grad_Ab_norm2[:, i])
+                          for i in range(len(self.A))])
+        grad = grad.sum(axis=0)
+        gradTV = self.tv * grad.reshape(beta.shape)
+
+        grad = gradOLS + gradL1 + gradTV
+
+        return grad
+    def reset(self):
+        """Free any cached computations from previous use of this Function.
+
+        From the interface "Function".
+        """
+        pass
+
+
 class LogisticRegression(properties.AtomicFunction,
                          properties.Gradient,
                          properties.LipschitzContinuousGradient,
@@ -380,6 +520,7 @@ class LogisticRegression(properties.AtomicFunction,
     mean : Boolean. Whether to compute the squared loss or the mean squared
             loss. Default is True, the mean squared loss.
     """
+
     def __init__(self, X, y, weights=None, mean=True):
         self.X = X
         self.y = y
@@ -452,7 +593,7 @@ class LogisticRegression(properties.AtomicFunction,
         True
         """
         Xbeta = np.dot(self.X, beta)
-#        pi = 1.0 / (1.0 + np.exp(-Xbeta))
+        #        pi = 1.0 / (1.0 + np.exp(-Xbeta))
         pi = np.reciprocal(1.0 + np.exp(-Xbeta))
 
         grad = -np.dot(self.X.T, self.weights * (self.y - pi))
@@ -532,6 +673,7 @@ class RidgeLogisticRegression(properties.CompositeFunction,
     wi: sample i weight
     [Hastie 2009, p.: 102, 119 and 161, Bishop 2006 p.: 206]
     """
+
     def __init__(self, X, y, k=0.0, weights=None, penalty_start=0, mean=True):
         """
         Parameters
@@ -631,7 +773,7 @@ class RidgeLogisticRegression(properties.CompositeFunction,
         True
         """
         Xbeta = np.dot(self.X, beta)
-#        pi = 1.0 / (1.0 + np.exp(-Xbeta))
+        #        pi = 1.0 / (1.0 + np.exp(-Xbeta))
         pi = np.reciprocal(1.0 + np.exp(-Xbeta))
 
         grad = -np.dot(self.X.T, self.weights * (self.y - pi))
@@ -648,9 +790,9 @@ class RidgeLogisticRegression(properties.CompositeFunction,
 
         return grad
 
-#        return -np.dot(self.X.T,
-#                       np.dot(self.W, (self.y - pi))) \
-#                       + self.k * beta
+    #        return -np.dot(self.X.T,
+    #                       np.dot(self.W, (self.y - pi))) \
+    #                       + self.k * beta
 
     def L(self, beta=None):
         """Lipschitz constant of the gradient.
@@ -752,8 +894,8 @@ class LatentVariableVariance(properties.Function,
         """
         grad = -np.dot(self.X.T, np.dot(self.X, w)) * (2.0 / self._n)
 
-#        approx_grad = utils.approx_grad(f, w, eps=1e-4)
-#        print "LatentVariableVariance:", maths.norm(grad - approx_grad)
+        #        approx_grad = utils.approx_grad(f, w, eps=1e-4)
+        #        print "LatentVariableVariance:", maths.norm(grad - approx_grad)
 
         return grad
 
@@ -819,6 +961,7 @@ class LinearFunction(properties.CompositeFunction,
                      properties.StepSize):
     """A linear function.
     """
+
     def __init__(self, a):
         """
         Parameters
@@ -901,6 +1044,7 @@ class LinearSVM(properties.Function,
     Note that we assume that the bias (if any!) is included in the first
     penalty_start columns of X, and those columns will not be penalised.
     """
+
     def __init__(self, X, y, l, kernel=None, penalty_start=0, mean=False):
         """
         Parameters
@@ -1054,6 +1198,7 @@ class NonlinearSVM(properties.KernelFunction,
     first penalty_start columns of X, and hence correspond to the first
     penalty_start rows and columns of the kernel.
     """
+
     def __init__(self, X, y, l, kernel=None, penalty_start=0, mean=False):
         """
         Parameters
@@ -1225,4 +1370,5 @@ class NonlinearSVM(properties.KernelFunction,
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

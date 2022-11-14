@@ -1260,7 +1260,7 @@ class ADMMglasso(bases.ExplicitAlgorithm,
     def __init__(self, rho=1.0, mu=10.0, tau_incr=2.0, tau_decr=2.0,
                  info=[], A=None,
                  eps=consts.TOLERANCE, max_iter=consts.MAX_ITER, min_iter=1,
-                 simulation=False):
+                 simulation=False, rho_start=1):
         # TODO: Investigate what is a good default value here!
 
         super(ADMMglasso, self).__init__(info=info,
@@ -1268,10 +1268,12 @@ class ADMMglasso(bases.ExplicitAlgorithm,
                                          min_iter=min_iter)
 
         self.rho = max(consts.FLOAT_EPSILON, float(rho))
-        self.mu = max(1.0, float(mu))
+        # self.mu = max(1.0, float(mu))
+        self.mu = float(mu)
         self.tau_incr = max(1.0, float(tau_incr))
         self.tau_decr = max(1.0, float(tau_decr))
         self.A = A
+        self.rho_start = rho_start
 
         self.eps = max(consts.FLOAT_EPSILON, float(eps))
 
@@ -1309,7 +1311,7 @@ class ADMMglasso(bases.ExplicitAlgorithm,
         if self.info_requested(Info.fista_iter):
             niter_fista = []
 
-        #functions.set_rho(self.rho)
+        # functions.set_rho(self.rho)
 
         x_new = xy[0]
         # Bx_new = xy[1]
@@ -1320,9 +1322,9 @@ class ADMMglasso(bases.ExplicitAlgorithm,
         # re-order A components per differences
         B = [0.0] * A[0].shape[0]
         for ii in range(A[0].shape[0]):
-            B[ii] = A[0][ii, ]
+            B[ii] = A[0][ii,]
             for jj in range(1, len(A)):
-                B[ii] = sparse.vstack([B[ii], A[jj][ii, ]])
+                B[ii] = sparse.vstack([B[ii], A[jj][ii,]])
 
         Bx_new = [0.0] * len(B)
         for ii in range(len(B)):
@@ -1368,19 +1370,29 @@ class ADMMglasso(bases.ExplicitAlgorithm,
             if not self.simulation:
                 # stopping criterion chan
                 delta_old = delta_new
-                delta_new = (maths.norm(x_new - x_old))/np.sqrt(x_new.shape[0]) + \
-                        (maths.norm(z_new - z_old))/np.sqrt(z_new.shape[0]) + \
-                        (maths.norm(u_new - u_old))/np.sqrt(u_new.shape[0])
-
-
-                # if delta_new >= self.mu * delta_old:
-                #     self.rho *= self.tau_incr
-                #     u_new *= 1.0 / self.tau_incr  # Rescale dual variable.
-                #     functions.set_rho(self.rho)
-                #     print(" rho in admm: ", self.rho)
-
+                delta_new = (maths.norm(x_new - x_old)) / np.sqrt(x_new.shape[0]) + \
+                            (maths.norm(z_new - z_old)) / np.sqrt(z_new.shape[0]) + \
+                            (maths.norm(u_new - u_old)) / np.sqrt(u_new.shape[0])
+                if self.mu < 2 and counter > 1:
+                    if delta_new >=self.mu * delta_old:
+                        # self.rho *= self.tau_incr
+                        # u_new *= 1.0 / self.tau_incr  # Rescale dual variable.
+                        self.rho /= self.tau_decr
+                        # u_new *= self.tau_decr
+                        u_new = u_old  # Rescale dual variable.
+                        z_new = z_old
+                        delta_new = (1 / self.mu) * delta_old
+                        functions.set_rho(self.rho)
+                        print(" rho decreased: ", self.rho)
+                    else:
+                        if delta_new <= (2 - self.mu) * delta_old:
+                            self.rho *= self.tau_incr
+                            u_new *= 1.0 / self.tau_incr  # Rescale dual variable.
+                            functions.set_rho(self.rho)
+                            print(" rho increased: ", self.rho)
 
                 # stopping criterion boyd
+                print("delta_old : ", delta_old, "delta_new : ", delta_new, " rho_admm : ", self.rho)
                 if counter == 1:
                     if delta_new < self.eps and counter >= self.min_iter:
                         #                        print "Stopping criterion kicked in!"
@@ -1388,9 +1400,9 @@ class ADMMglasso(bases.ExplicitAlgorithm,
                             self.info_set(Info.converged, True)
                         break
                 else:
-                    print(" x : ", maths.norm(x_new - x_old), "z :", maths.norm(z_new - z_old), "u : ", maths.norm(u_new - u_old))
-                    print(" dx : ", x_new.shape[0], "dz :", z_new.shape[0], "du : ", u_new.shape[0])
-                    print(" delta : ", delta_new)
+                    # print(" x : ", maths.norm(x_new - x_old), "z :", maths.norm(z_new - z_old), "u : ",
+                    #      maths.norm(u_new - u_old))
+                    # print(" dx : ", x_new.shape[0], "dz :", z_new.shape[0], "du : ", u_new.shape[0])
 
                     if delta_new < self.eps \
                             and counter >= self.min_iter:
@@ -1399,38 +1411,38 @@ class ADMMglasso(bases.ExplicitAlgorithm,
                             self.info_set(Info.converged, True)
                         break
 
-            # Update the penalty parameter, rho, dynamically.
-            if self.mu > 1.0:
-                Bz_old = [0.0] * len(B)
-                dimB = B[0].shape[0]
-                for ii in range(len(B)):
-                    Bz_old[ii] = B[ii].transpose().dot(z_old[ii * dimB: ii * dimB + dimB])
-                Bz_old = np.hstack(Bz_old)
-                Bz_old = np.sum(Bz_old, axis=1).reshape(x_old.shape)
-
-                Bz_new = [0.0] * len(B)
-                dimB = B[0].shape[0]
-                for ii in range(len(B)):
-                    Bz_new[ii] = B[ii].transpose().dot(z_new[ii * dimB: ii * dimB + dimB])
-                Bz_new = np.hstack(Bz_new)
-                Bz_new = np.sum(Bz_new, axis=1).reshape(x_new.shape)
-
-                r = -Bx_new + z_new
-                s = (Bz_new - Bz_old) * -self.rho
-                norm_r = maths.norm(r)
-                norm_s = maths.norm(s)
-
-                print("norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", self.rho)
-
-                if norm_r > self.mu * norm_s:
-                    self.rho *= self.tau_incr
-                    u_new *= 1.0 / self.tau_incr  # Rescale dual variable.
-                elif norm_s > self.mu * norm_r:
-                    self.rho /= self.tau_decr
-                    u_new *= self.tau_decr  # Rescale dual variable.
-
-                # Update the penalty parameter in the functions.
-                functions.set_rho(self.rho)
+            # # Update the penalty parameter, rho, dynamically.
+            # if self.mu > 1.0:
+            #     Bz_old = [0.0] * len(B)
+            #     dimB = B[0].shape[0]
+            #     for ii in range(len(B)):
+            #         Bz_old[ii] = B[ii].transpose().dot(z_old[ii * dimB: ii * dimB + dimB])
+            #     Bz_old = np.hstack(Bz_old)
+            #     Bz_old = np.sum(Bz_old, axis=1).reshape(x_old.shape)
+            #
+            #     Bz_new = [0.0] * len(B)
+            #     dimB = B[0].shape[0]
+            #     for ii in range(len(B)):
+            #         Bz_new[ii] = B[ii].transpose().dot(z_new[ii * dimB: ii * dimB + dimB])
+            #     Bz_new = np.hstack(Bz_new)
+            #     Bz_new = np.sum(Bz_new, axis=1).reshape(x_new.shape)
+            #
+            #     r = -Bx_new + z_new
+            #     s = (Bz_new - Bz_old) * -self.rho
+            #     norm_r = maths.norm(r)
+            #     norm_s = maths.norm(s)
+            #
+            #     print("norm(r): ", norm_r, ", norm(s): ", norm_s, ", rho:", self.rho)
+            #
+            #     if norm_r > self.mu * norm_s:
+            #         self.rho *= self.tau_incr
+            #         u_new *= 1.0 / self.tau_incr  # Rescale dual variable.
+            #     elif norm_s > self.mu * norm_r:
+            #         self.rho /= self.tau_decr
+            #         u_new *= self.tau_decr  # Rescale dual variable.
+            #
+            #     # Update the penalty parameter in the functions.
+            #     functions.set_rho(self.rho)
 
         if self.info_requested(Info.num_iter):
             self.info_set(Info.num_iter, self.num_iter)
